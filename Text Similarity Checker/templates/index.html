@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Text Similarity Checker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #1a1d27;
+      border: 1px solid #2e3147;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+      color: #7c8cf8;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.85rem;
+      margin-bottom: 30px;
+    }
+
+    .inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    textarea {
+      width: 100%;
+      height: 140px;
+      background: #0f1117;
+      border: 1px solid #2e3147;
+      border-radius: 10px;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: #7c8cf8; }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      background: #7c8cf8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #6270e0; }
+    button:disabled { background: #3a3f5c; cursor: not-allowed; }
+
+    #result {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .score-card {
+      background: #0f1117;
+      border: 1px solid #2e3147;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .score-card .label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .score-card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #7c8cf8;
+    }
+
+    .verdict {
+      text-align: center;
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .verdict.high   { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+    .verdict.med    { background: #1c1a03; color: #facc15; border: 1px solid #713f12; }
+    .verdict.low    { background: #1c0f03; color: #fb923c; border: 1px solid #7c2d12; }
+    .verdict.none   { background: #1f0607; color: #f87171; border: 1px solid #7f1d1d; }
+
+    .bar-wrap {
+      background: #0f1117;
+      border-radius: 99px;
+      height: 8px;
+      margin: 16px 0 4px;
+      overflow: hidden;
+      border: 1px solid #2e3147;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #7c8cf8, #4ade80);
+      transition: width 0.6s ease;
+    }
+
+    .error-msg {
+      color: #f87171;
+      text-align: center;
+      margin-top: 16px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 520px) {
+      .inputs { grid-template-columns: 1fr; }
+      .score-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Text Similarity Checker</h1>
+    <p class="subtitle">NLP-Powered &mdash; spaCy + TF-IDF</p>
+
+    <div class="inputs">
+      <div>
+        <label>Text 1</label>
+        <textarea id="text1" placeholder="Enter first text..."></textarea>
+      </div>
+      <div>
+        <label>Text 2</label>
+        <textarea id="text2" placeholder="Enter second text..."></textarea>
+      </div>
+    </div>
+
+    <button id="checkBtn" onclick="checkSimilarity()">Check Similarity</button>
+
+    <div id="result">
+      <div class="score-grid">
+        <div class="score-card">
+          <div class="label">spaCy</div>
+          <div class="value" id="spacy-score">-</div>
+        </div>
+        <div class="score-card">
+          <div class="label">TF-IDF</div>
+          <div class="value" id="tfidf-score">-</div>
+        </div>
+        <div class="score-card">
+          <div class="label">Average</div>
+          <div class="value" id="avg-score">-</div>
+        </div>
+      </div>
+
+      <div class="bar-wrap">
+        <div class="bar-fill" id="bar" style="width:0%"></div>
+      </div>
+
+      <div class="verdict" id="verdict"></div>
+    </div>
+
+    <div class="error-msg" id="error"></div>
+  </div>
+
+  <script>
+    async function checkSimilarity() {
+      const text1 = document.getElementById("text1").value.trim();
+      const text2 = document.getElementById("text2").value.trim();
+      const btn = document.getElementById("checkBtn");
+      const errorEl = document.getElementById("error");
+
+      errorEl.textContent = "";
+      document.getElementById("result").style.display = "none";
+
+      if (!text1 || !text2) {
+        errorEl.textContent = "Please enter both texts.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Analyzing...";
+
+      try {
+        const res = await fetch("/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text1, text2 })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          errorEl.textContent = data.error;
+          return;
+        }
+
+        document.getElementById("spacy-score").textContent = data.spacy + "%";
+        document.getElementById("tfidf-score").textContent = data.tfidf + "%";
+        document.getElementById("avg-score").textContent = data.average + "%";
+        document.getElementById("bar").style.width = data.average + "%";
+
+        const verdict = document.getElementById("verdict");
+        verdict.textContent = data.label;
+        verdict.className = "verdict";
+        if (data.average >= 80) verdict.classList.add("high");
+        else if (data.average >= 50) verdict.classList.add("med");
+        else if (data.average >= 25) verdict.classList.add("low");
+        else verdict.classList.add("none");
+
+        document.getElementById("result").style.display = "block";
+      } catch (e) {
+        errorEl.textContent = "Something went wrong. Please try again.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Check Similarity";
+      }
+    }
+  </script>
+</body>
+</html>

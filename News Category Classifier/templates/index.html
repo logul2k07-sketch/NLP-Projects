@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>News Category Classifier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>📰 News Category Classifier</h1>
+      <p class="subtitle">Paste a news headline or article to detect its category using NLP</p>
+
+      <textarea id="newsInput" placeholder="Enter news text here..." rows="6"></textarea>
+
+      <button id="classifyBtn" onclick="classifyNews()">Classify</button>
+
+      <div id="result" class="result hidden">
+        <div class="category-badge" id="categoryBadge"></div>
+        <p class="confidence" id="confidenceText"></p>
+        <div class="scores" id="scoresList"></div>
+      </div>
+
+      <div id="error" class="error hidden"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>

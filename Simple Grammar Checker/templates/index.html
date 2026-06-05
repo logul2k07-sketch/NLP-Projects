@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Grammar Checker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: #1a202c;
+    }
+
+    header p {
+      color: #718096;
+      margin-top: 6px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 28px;
+      width: 100%;
+      max-width: 780px;
+      margin-bottom: 24px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 130px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 1rem;
+      resize: vertical;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    textarea:focus { border-color: #4299e1; }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #checkBtn {
+      background: #4299e1;
+      color: #fff;
+      flex: 1;
+    }
+
+    #checkBtn:hover { background: #3182ce; }
+
+    #clearBtn {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+
+    #clearBtn:hover { background: #cbd5e0; }
+
+    #toggleTokens {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+
+    #toggleTokens.active {
+      background: #9f7aea;
+      color: #fff;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .badge.error { background: #fed7d7; color: #c53030; }
+    .badge.success { background: #c6f6d5; color: #276749; }
+
+    .section-title {
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .highlighted-text {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      word-break: break-word;
+    }
+
+    .highlighted-text mark {
+      background: #fefcbf;
+      border-bottom: 2px solid #d69e2e;
+      border-radius: 3px;
+      padding: 1px 2px;
+    }
+
+    .corrected-box {
+      background: #f0fff4;
+      border: 1px solid #9ae6b4;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      color: #276749;
+      margin-bottom: 16px;
+    }
+
+    .error-list { list-style: none; }
+
+    .error-item {
+      background: #fff5f5;
+      border-left: 4px solid #fc8181;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+
+    .error-item .msg { font-weight: 600; color: #c53030; margin-bottom: 4px; }
+    .error-item .ctx { color: #718096; font-size: 0.9rem; margin-bottom: 4px; }
+    .error-item .sug span {
+      display: inline-block;
+      background: #bee3f8;
+      color: #2b6cb0;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.85rem;
+      margin-right: 6px;
+      margin-top: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: #edf2f7;
+      color: #4a5568;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #2d3748;
+    }
+
+    tr:hover td { background: #f7fafc; }
+
+    .hidden { display: none; }
+
+    #loader {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+
+    #results { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📝 Simple Grammar Checker</h1>
+  <p>Powered by NLP — spaCy &amp; LanguageTool</p>
+</header>
+
+<div class="card">
+  <textarea id="inputText" placeholder="Type or paste your sentence here..."></textarea>
+  <div class="actions">
+    <button id="checkBtn" onclick="checkGrammar()">Check Grammar</button>
+    <button id="clearBtn" onclick="clearAll()">Clear</button>
+    <button id="toggleTokens" onclick="toggleTokenView()">Show Tokens</button>
+  </div>
+  <div id="loader" class="hidden">Analyzing...</div>
+</div>
+
+<div id="results">
+
+  <div class="card" id="highlightCard">
+    <div class="section-title">Highlighted Text</div>
+    <div class="highlighted-text" id="highlightedText"></div>
+
+    <div id="correctedBlock" class="hidden">
+      <div class="section-title">Corrected Text</div>
+      <div class="corrected-box" id="correctedText"></div>
+    </div>
+  </div>
+
+  <div class="card" id="errorsCard">
+    <div id="statusBadge"></div>
+    <ul class="error-list" id="errorList"></ul>
+  </div>
+
+  <div class="card hidden" id="tokensCard">
+    <div class="section-title">Token Analysis</div>
+    <table>
+      <thead>
+        <tr><th>Token</th><th>Part of Speech</th><th>Dependency</th></tr>
+      </thead>
+      <tbody id="tokenTable"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  let showTokens = false;
+
+  async function checkGrammar() {
+    const text = document.getElementById("inputText").value.trim();
+    if (!text) return;
+
+    document.getElementById("loader").classList.remove("hidden");
+    document.getElementById("results").style.display = "none";
+
+    const res = await fetch("/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+
+    const data = await res.json();
+    document.getElementById("loader").classList.add("hidden");
+
+    renderResults(data, text);
+    document.getElementById("results").style.display = "block";
+    if (showTokens) document.getElementById("tokensCard").classList.remove("hidden");
+  }
+
+  function renderResults(data, original) {
+    // Highlighted text — replace [word] with <mark>word</mark>
+    const raw = data.highlighted.replace(/\[([^\]]+)\]/g, "<mark>$1</mark>");
+    document.getElementById("highlightedText").innerHTML = raw;
+
+    // Corrected
+    if (data.corrected && data.corrected !== original) {
+      document.getElementById("correctedText").textContent = data.corrected;
+      document.getElementById("correctedBlock").classList.remove("hidden");
+    } else {
+      document.getElementById("correctedBlock").classList.add("hidden");
+    }
+
+    // Badge
+    const badge = document.getElementById("statusBadge");
+    if (data.error_count === 0) {
+      badge.innerHTML = `<span class="badge success">✅ No issues found</span>`;
+    } else {
+      badge.innerHTML = `<span class="badge error">❌ ${data.error_count} issue(s) found</span>`;
+    }
+
+    // Errors
+    const list = document.getElementById("errorList");
+    list.innerHTML = "";
+    data.errors.forEach((e, i) => {
+      const sug = e.suggestions.length
+        ? `<div class="sug">${e.suggestions.map(s => `<span>${s}</span>`).join("")}</div>`
+        : "";
+      list.innerHTML += `
+        <li class="error-item">
+          <div class="msg">${i + 1}. ${e.message}</div>
+          <div class="ctx">Context: ${e.context}</div>
+          ${sug}
+        </li>`;
+    });
+
+    // Tokens
+    const tbody = document.getElementById("tokenTable");
+    tbody.innerHTML = "";
+    data.tokens.forEach(([token, pos, dep]) => {
+      tbody.innerHTML += `<tr><td>${token}</td><td>${pos}</td><td>${dep}</td></tr>`;
+    });
+  }
+
+  function toggleTokenView() {
+    showTokens = !showTokens;
+    const btn = document.getElementById("toggleTokens");
+    const card = document.getElementById("tokensCard");
+    btn.textContent = showTokens ? "Hide Tokens" : "Show Tokens";
+    btn.classList.toggle("active", showTokens);
+    card.classList.toggle("hidden", !showTokens);
+  }
+
+  function clearAll() {
+    document.getElementById("inputText").value = "";
+    document.getElementById("results").style.display = "none";
+  }
+
+  document.getElementById("inputText").addEventListener("keydown", function (e) {
+    if (e.ctrlKey && e.key === "Enter") checkGrammar();
+  });
+</script>
+
+</body>
+</html>

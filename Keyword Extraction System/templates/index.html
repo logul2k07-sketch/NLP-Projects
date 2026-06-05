@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Keyword Extraction System</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #2d3748; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white; padding: 24px; text-align: center;
+    }
+    header h1 { font-size: 2rem; }
+    header p { opacity: 0.85; margin-top: 6px; }
+
+    .container { max-width: 900px; margin: 30px auto; padding: 0 16px; }
+
+    .card {
+      background: white; border-radius: 12px; padding: 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 24px;
+    }
+
+    label { font-weight: 600; display: block; margin-bottom: 8px; }
+
+    textarea {
+      width: 100%; padding: 12px; border: 2px solid #e2e8f0;
+      border-radius: 8px; resize: vertical; font-size: 0.95rem;
+      min-height: 160px; transition: border 0.2s;
+    }
+    textarea:focus { outline: none; border-color: #667eea; }
+
+    .controls { display: flex; align-items: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+
+    .controls label { font-weight: 500; margin: 0; }
+    .controls input[type=range] { width: 150px; cursor: pointer; accent-color: #667eea; }
+    #topNVal { font-weight: 700; color: #667eea; min-width: 20px; }
+
+    button {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white; border: none; padding: 11px 28px;
+      border-radius: 8px; font-size: 1rem; cursor: pointer;
+      transition: opacity 0.2s; margin-left: auto;
+    }
+    button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .section-title {
+      font-size: 1.05rem; font-weight: 700; margin-bottom: 14px;
+      padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; color: #4a5568;
+    }
+
+    /* Keywords table */
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f7f8fc; text-align: left; padding: 10px 14px; font-size: 0.85rem; color: #718096; }
+    td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+
+    .bar-wrap { background: #edf2f7; border-radius: 20px; height: 8px; min-width: 80px; }
+    .bar { background: linear-gradient(90deg, #667eea, #764ba2); height: 8px; border-radius: 20px; transition: width 0.5s; }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: #ebf4ff; color: #3182ce; padding: 5px 13px;
+      border-radius: 20px; font-size: 0.85rem; font-weight: 500;
+    }
+    .chip.entity { background: #fef3c7; color: #92400e; }
+    .chip .etype { font-size: 0.72rem; background: #f59e0b; color: white; border-radius: 10px; padding: 1px 6px; margin-left: 5px; }
+
+    #results { display: none; }
+    #error { color: #e53e3e; font-size: 0.9rem; margin-top: 8px; display: none; }
+    .spinner { display: none; width: 20px; height: 20px; border: 3px solid #e2e8f0; border-top-color: #667eea; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔑 Keyword Extraction System</h1>
+    <p>Extract important keywords, noun phrases, and named entities using NLP</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <label for="inputText">Enter your text:</label>
+      <textarea id="inputText" placeholder="Paste or type any paragraph, article, or document here..."></textarea>
+      <div id="error"></div>
+      <div class="controls">
+        <label>Top Keywords: <span id="topNVal">10</span></label>
+        <input type="range" id="topN" min="3" max="20" value="10" oninput="document.getElementById('topNVal').textContent=this.value">
+        <div class="spinner" id="spinner"></div>
+        <button id="extractBtn" onclick="extractKeywords()">Extract Keywords</button>
+      </div>
+    </div>
+
+    <div id="results">
+      <div class="card">
+        <div class="section-title">📊 Top Keywords</div>
+        <table>
+          <thead><tr><th>#</th><th>Keyword</th><th>Count</th><th style="width:200px">Score</th></tr></thead>
+          <tbody id="keywordTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="section-title">🔵 Noun Phrases</div>
+        <div class="chips" id="nounPhrases"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">🟡 Named Entities</div>
+        <div class="chips" id="entities"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function extractKeywords() {
+      const text = document.getElementById("inputText").value.trim();
+      const topN = document.getElementById("topN").value;
+      const errEl = document.getElementById("error");
+      errEl.style.display = "none";
+
+      if (!text) {
+        errEl.textContent = "Please enter some text.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      const btn = document.getElementById("extractBtn");
+      const spinner = document.getElementById("spinner");
+      btn.disabled = true;
+      spinner.style.display = "inline-block";
+      document.getElementById("results").style.display = "none";
+
+      try {
+        const res = await fetch("/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, top_n: topN })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Server error");
+        renderResults(data);
+      } catch (e) {
+        errEl.textContent = "Error: " + e.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        spinner.style.display = "none";
+      }
+    }
+
+    function renderResults({ keywords, noun_phrases, entities }) {
+      // Keywords table
+      const tbody = document.getElementById("keywordTable");
+      tbody.innerHTML = keywords.map((k, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${k.keyword}</strong></td>
+          <td>${k.count}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="bar-wrap" style="flex:1"><div class="bar" style="width:${k.score}%"></div></div>
+              <span style="font-size:0.82rem;color:#718096">${k.score}%</span>
+            </div>
+          </td>
+        </tr>`).join("");
+
+      // Noun phrases
+      document.getElementById("nounPhrases").innerHTML = noun_phrases.length
+        ? noun_phrases.map(p => `<span class="chip">${p}</span>`).join("")
+        : '<span style="color:#a0aec0">None found</span>';
+
+      // Entities
+      document.getElementById("entities").innerHTML = entities.length
+        ? entities.map(e => `<span class="chip entity">${e.text}<span class="etype">${e.label}</span></span>`).join("")
+        : '<span style="color:#a0aec0">None found</span>';
+
+      document.getElementById("results").style.display = "block";
+    }
+
+    // Allow Ctrl+Enter to submit
+    document.getElementById("inputText").addEventListener("keydown", e => {
+      if (e.ctrlKey && e.key === "Enter") extractKeywords();
+    });
+  </script>
+</body>
+</html>
